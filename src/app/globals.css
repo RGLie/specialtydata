@@ -3,11 +3,21 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --coffee-brown: #6B4423;
+  --coffee-light: #8B5A3C;
+  --coffee-dark: #4A2C17;
+  --gray-light: #f8f9fa;
+  --gray-medium: #e9ecef;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-coffee-brown: var(--coffee-brown);
+  --color-coffee-light: var(--coffee-light);
+  --color-coffee-dark: var(--coffee-dark);
+  --color-gray-light: var(--gray-light);
+  --color-gray-medium: var(--gray-medium);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,5 +32,30 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* 커스텀 스타일 */
+.coffee-brown {
+  color: var(--coffee-brown);
+}
+
+.bg-coffee-brown {
+  background-color: var(--coffee-brown);
+}
+
+.border-coffee-brown {
+  border-color: var(--coffee-brown);
+}
+
+.hover\:bg-coffee-light:hover {
+  background-color: var(--coffee-light);
+}
+
+.focus\:border-coffee-brown:focus {
+  border-color: var(--coffee-brown);
+}
+
+.focus\:ring-coffee-brown:focus {
+  --tw-ring-color: var(--coffee-brown);
 }
