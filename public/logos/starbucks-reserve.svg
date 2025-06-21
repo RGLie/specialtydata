@@ -1,0 +1,13 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="40" cy="40" r="35" fill="#00754a"/>
+  <circle cx="40" cy="40" r="25" fill="none" stroke="white" stroke-width="2"/>
+  <text x="40" y="32" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white" text-anchor="middle">
+    STARBUCKS
+  </text>
+  <text x="40" y="48" font-family="Arial, sans-serif" font-size="7" fill="white" text-anchor="middle">
+    RESERVE
+  </text>
+  <text x="40" y="42" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">
+    ⭐
+  </text>
+</svg> 

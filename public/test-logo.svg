@@ -1,0 +1,7 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="40" cy="40" r="35" fill="#6B4423"/>
+  <text x="40" y="48" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">
+    LOGO
+  </text>
+  <circle cx="40" cy="30" r="5" fill="white"/>
+</svg> 
