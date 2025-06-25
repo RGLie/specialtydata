@@ -16,6 +16,7 @@ export default function Home() {
   const [selectedRoastLevels, setSelectedRoastLevels] = useState<string[]>([]);
   const [selectedProcessingMethods, setSelectedProcessingMethods] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showDiscontinuedProducts, setShowDiscontinuedProducts] = useState(true);
   const searchRef = useRef<HTMLDivElement>(null);
 
   
@@ -51,7 +52,7 @@ export default function Home() {
     if (isSearched && searchQuery.trim()) {
       handleSearch();
     }
-  }, [onlyUnspecialtyPartners, selectedRoastLevels, selectedProcessingMethods]);
+  }, [onlyUnspecialtyPartners, selectedRoastLevels, selectedProcessingMethods, showDiscontinuedProducts]);
 
   const handleSearch = (query?: string) => {
     const searchTerm = query || searchQuery;
@@ -60,7 +61,8 @@ export default function Home() {
         searchTerm, 
         onlyUnspecialtyPartners, 
         selectedRoastLevels, 
-        selectedProcessingMethods
+        selectedProcessingMethods,
+        showDiscontinuedProducts
       );
       setSearchResults(results);
       setIsSearched(true);
@@ -103,6 +105,7 @@ export default function Home() {
     setOnlyUnspecialtyPartners(false);
     setSelectedRoastLevels([]);
     setSelectedProcessingMethods([]);
+    setShowDiscontinuedProducts(true);
   };
 
   return (
@@ -112,7 +115,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Coffee className="w-5 h-5 coffee-brown" />
-            <span className="text-base font-semibold coffee-brown">SpecialtyData</span>
+            <span className="text-base font-semibold coffee-brown cursor-pointer" onClick={() => setIsSearched(false)}>SpecialtyData</span>
           </div>
           <nav className="hidden md:flex space-x-4">
             <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
@@ -211,7 +214,7 @@ export default function Home() {
                   >
                     <Filter className="w-4 h-4" />
                     <span>필터</span>
-                    {(onlyUnspecialtyPartners || selectedRoastLevels.length > 0 || selectedProcessingMethods.length > 0) && (
+                    {(onlyUnspecialtyPartners || selectedRoastLevels.length > 0 || selectedProcessingMethods.length > 0 || !showDiscontinuedProducts) && (
                       <span className="w-2 h-2 bg-coffee-brown rounded-full"></span>
                     )}
                   </button>
@@ -249,7 +252,19 @@ export default function Home() {
                       />
                       <span className="flex items-center">
                         <span className="text-blue-600 font-medium mr-1">언스페셜티</span>
+                        <span>파트너만 보기</span>
                       </span>
+                    </label>
+                  </div>
+                  <div className="mb-3">
+                    <label className="flex items-center space-x-2 text-sm text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!showDiscontinuedProducts}
+                        onChange={(e) => setShowDiscontinuedProducts(!e.target.checked)}
+                        className="w-4 h-4 text-coffee-brown border-gray-300 rounded focus:ring-coffee-brown focus:ring-2"
+                      />
+                      <span>판매중인 상품만 보기</span>
                     </label>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -295,9 +310,20 @@ export default function Home() {
                   </div>
 
                   {/* 활성 필터 표시 */}
-                  {(selectedRoastLevels.length > 0 || selectedProcessingMethods.length > 0) && (
+                  {(selectedRoastLevels.length > 0 || selectedProcessingMethods.length > 0 || !showDiscontinuedProducts) && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <div className="flex flex-wrap gap-1">
+                        {!showDiscontinuedProducts && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs bg-coffee-brown text-white rounded-full">
+                            판매중만 보기
+                            <button
+                              onClick={() => setShowDiscontinuedProducts(true)}
+                              className="ml-1 hover:bg-coffee-light rounded-full"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        )}
                         {selectedRoastLevels.map(level => (
                           <span
                             key={`roast-${level}`}
@@ -458,15 +484,33 @@ export default function Home() {
                           <div 
                             key={index} 
                             className={`relative p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
-                              index === 0 
-                                ? 'border-green-200 bg-green-50' 
-                                : 'border-gray-200 bg-white hover:border-gray-300'
+                              item.product.saleStatus === 'discontinued' 
+                                ? 'border-gray-300 bg-gray-100 opacity-70' 
+                                : index === 0 
+                                  ? 'border-green-200 bg-green-50' 
+                                  : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
-                            {index === 0 && (
+                            {index === 0 && item.product.saleStatus !== 'discontinued' && (
                               <div className="absolute -top-1.5 left-3">
                                 <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
                                   최저가
+                                </span>
+                              </div>
+                            )}
+                            
+                            {item.product.saleStatus === 'discontinued' && (
+                              <div className="absolute -top-1.5 right-3">
+                                <span className="bg-gray-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                                  판매종료
+                                </span>
+                              </div>
+                            )}
+                            
+                            {item.product.saleStatus === 'limited' && (
+                              <div className="absolute -top-1.5 right-3">
+                                <span className="bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                                  한정판매
                                 </span>
                               </div>
                             )}
@@ -475,7 +519,9 @@ export default function Home() {
                               <div className="flex items-center space-x-2">
                                 {/* 로스터리 로고 */}
                                 <div 
-                                  className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border"
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border ${
+                                    item.product.saleStatus === 'discontinued' ? 'grayscale' : ''
+                                  }`}
                                   style={{ borderColor: item.roastery.brandColor }}
                                 >
                                   <img 
@@ -499,21 +545,31 @@ export default function Home() {
                                 
                                 <div className="flex-1">
                                   <div className="flex items-center space-x-1">
-                                    <span className="font-medium text-gray-900 text-sm">{item.roastery.name}</span>
+                                    <span className={`font-medium text-sm ${
+                                      item.product.saleStatus === 'discontinued' ? 'text-gray-500' : 'text-gray-900'
+                                    }`}>{item.roastery.name}</span>
                                     {item.roastery.isUnspecialtyPartner && (
                                       <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-800 rounded-full">
                                         언스페셜티
                                       </span>
                                     )}
-                                    <span className="text-xs text-gray-500">({item.product.weight})</span>
+                                    <span className={`text-xs ${
+                                      item.product.saleStatus === 'discontinued' ? 'text-gray-400' : 'text-gray-500'
+                                    }`}>({item.product.weight})</span>
                                   </div>
-                                  <div className="text-xs text-gray-600">{item.product.name}</div>
+                                  <div className={`text-xs ${
+                                    item.product.saleStatus === 'discontinued' ? 'text-gray-400' : 'text-gray-600'
+                                  }`}>{item.product.name}</div>
                                   {item.product.tastingNotes && item.product.tastingNotes.length > 0 && (
                                     <div className="flex flex-wrap gap-0.5 mt-1">
                                       {item.product.tastingNotes.slice(0, 2).map((note, noteIndex) => (
                                         <span 
                                           key={noteIndex}
-                                          className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded"
+                                          className={`text-xs px-1 py-0.5 rounded ${
+                                            item.product.saleStatus === 'discontinued' 
+                                              ? 'bg-gray-200 text-gray-500' 
+                                              : 'bg-gray-100 text-gray-600'
+                                          }`}
                                         >
                                           {note}
                                         </span>
@@ -525,21 +581,23 @@ export default function Home() {
                               
                               <div className="flex items-center space-x-2">
                                 <div className="text-right">
-                                  <div className="text-base font-bold text-gray-900">
+                                  <div className={`text-base font-bold ${
+                                    item.product.saleStatus === 'discontinued' ? 'text-gray-500' : 'text-gray-900'
+                                  }`}>
                                     {item.product.price.toLocaleString()}원
                                   </div>
-                                  {/* {index > 0 && (
-                                    <div className="text-xs text-red-500">
-                                      +{(item.product.price - result.lowestPrice).toLocaleString()}원
-                                    </div>
-                                  )} */}
                                 </div>
                                 <a 
                                   href={item.product.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="p-2 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-sm"
-                                  style={{ backgroundColor: item.roastery.brandColor }}
+                                  className={`p-2 text-white rounded-lg transition-all duration-200 shadow-sm ${
+                                    item.product.saleStatus === 'discontinued' 
+                                      ? 'bg-gray-400 cursor-not-allowed' 
+                                      : 'hover:scale-105'
+                                  }`}
+                                  style={{ backgroundColor: item.product.saleStatus === 'discontinued' ? '#9CA3AF' : item.roastery.brandColor }}
+                                  onClick={item.product.saleStatus === 'discontinued' ? (e) => e.preventDefault() : undefined}
                                 >
                                   <ShoppingCart className="w-4 h-4 text-white" />
                                 </a>
@@ -595,7 +653,7 @@ export default function Home() {
               <a href="#" className="hover:text-gray-700 transition-colors">문의하기</a>
             </div>
             <div className="text-center md:text-right">
-              <p>&copy; 2024 SpecialtyData. All rights reserved.</p>
+              <p>&copy; 2025 SpecialtyData. All rights reserved.</p>
             </div>
           </div>
         </div>

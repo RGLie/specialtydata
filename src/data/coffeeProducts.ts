@@ -13,6 +13,7 @@ export interface CoffeeProduct {
   weight: string;
   url: string;
   inStock: boolean;
+  saleStatus: 'active' | 'discontinued' | 'limited'; // 판매 상태: 판매중, 판매종료, 한정판매
   lastUpdated: Date;
   tastingNotes: string[];
   altitude?: string;
@@ -36,6 +37,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://bluebottlecoffee.com/ethiopian-yirgacheffe",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-15"),
     tastingNotes: ["꽃향기", "레몬", "베르가못"],
     altitude: "1800-2000m",
@@ -55,6 +57,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://bluebottlecoffee.com/colombia-supremo",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-15"),
     tastingNotes: ["초콜릿", "캐러멜", "견과류"],
     altitude: "1400-1800m",
@@ -76,6 +79,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://www.starbucks.co.kr/reserve/ethiopia-yergacheffe",
     inStock: true,
+    saleStatus: 'limited',
     lastUpdated: new Date("2024-01-14"),
     tastingNotes: ["시트러스", "꽃향기", "흑차"],
     altitude: "1900m",
@@ -97,6 +101,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://coffeebeanbrothers.com/yirgacheffe-g1",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-16"),
     tastingNotes: ["레몬", "꽃향기", "와인"],
     altitude: "2000m",
@@ -116,6 +121,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://coffeebeanbrothers.com/colombia-huila",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-16"),
     tastingNotes: ["초콜릿", "견과류", "오렌지"],
     altitude: "1600m",
@@ -137,6 +143,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://www.ediya.com/colombia-blend",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-13"),
     tastingNotes: ["밸런스", "달콤함", "부드러움"],
     variety: "수프리모"
@@ -157,6 +164,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://www.hollys.co.kr/ethiopia-sidamo",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-12"),
     tastingNotes: ["꽃향기", "시트러스", "깔끔함"],
     altitude: "1800m",
@@ -179,6 +187,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://bluebottlecoffee.com/panama-geisha",
     inStock: true,
+    saleStatus: 'limited',
     lastUpdated: new Date("2024-01-15"),
     tastingNotes: ["플로럴", "자스민", "망고", "베르가못"],
     altitude: "1600m",
@@ -200,6 +209,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://coffeebeanbrothers.com/jamaica-blue-mountain",
     inStock: true,
+    saleStatus: 'active',
     lastUpdated: new Date("2024-01-16"),
     tastingNotes: ["부드러움", "균형", "견과류", "초콜릿"],
     altitude: "1200m",
@@ -221,6 +231,7 @@ export const coffeeProducts: CoffeeProduct[] = [
     weight: "200g",
     url: "https://www.starbucks.co.kr/reserve/hawaii-kau",
     inStock: true,
+    saleStatus: 'discontinued',
     lastUpdated: new Date("2024-01-14"),
     tastingNotes: ["부드러움", "견과류", "꿀", "바닐라"],
     altitude: "600m",

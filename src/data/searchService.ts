@@ -46,7 +46,8 @@ export class CoffeeSearchService {
     query: string, 
     onlyUnspecialtyPartners: boolean = false,
     roastLevelFilter: string[] = [],
-    processingFilter: string[] = []
+    processingFilter: string[] = [],
+    showDiscontinuedProducts: boolean = true
   ): SearchResult[] {
     if (!query.trim()) return [];
 
@@ -72,7 +73,13 @@ export class CoffeeSearchService {
       }
 
       if (isMatchFound && !processedStandardIds.has(standardCoffee.id)) {
-        const matchingProducts = this.getProductsForStandardCoffee(standardCoffee.id, onlyUnspecialtyPartners, roastLevelFilter, processingFilter);
+        const matchingProducts = this.getProductsForStandardCoffee(
+          standardCoffee.id, 
+          onlyUnspecialtyPartners, 
+          roastLevelFilter, 
+          processingFilter,
+          showDiscontinuedProducts
+        );
         
         if (matchingProducts.length > 0) {
           const prices = matchingProducts.map(p => p.product.price);
@@ -103,6 +110,7 @@ export class CoffeeSearchService {
       const roasteryProducts = coffeeProducts.filter(
         product => product.roasteryId === matchingRoastery.id && 
                   product.inStock &&
+                  (showDiscontinuedProducts || product.saleStatus !== 'discontinued') &&
                   (!product.standardCoffeeId || !processedStandardIds.has(product.standardCoffeeId)) &&
                   (roastLevelFilter.length === 0 || roastLevelFilter.includes(product.roastLevel)) &&
                   (processingFilter.length === 0 || processingFilter.includes(product.processing))
@@ -193,6 +201,7 @@ export class CoffeeSearchService {
         
         return this.isMatch(query, productSearchableTerms) && 
                product.inStock &&
+               (showDiscontinuedProducts || product.saleStatus !== 'discontinued') &&
                (!product.standardCoffeeId || !processedStandardIds.has(product.standardCoffeeId)) &&
                (roastLevelFilter.length === 0 || roastLevelFilter.includes(product.roastLevel)) &&
                (processingFilter.length === 0 || processingFilter.includes(product.processing));
@@ -255,13 +264,16 @@ export class CoffeeSearchService {
     standardCoffeeId: string, 
     onlyUnspecialtyPartners: boolean = false,
     roastLevelFilter: string[] = [],
-    processingFilter: string[] = []
+    processingFilter: string[] = [],
+    showDiscontinuedProducts: boolean = true
   ): Array<{
     product: CoffeeProduct;
     roastery: Roastery;
   }> {
     const matchingProducts = coffeeProducts.filter(
-      product => product.standardCoffeeId === standardCoffeeId && product.inStock
+      product => product.standardCoffeeId === standardCoffeeId && 
+                 product.inStock &&
+                 (showDiscontinuedProducts || product.saleStatus !== 'discontinued')
     );
 
     return matchingProducts
