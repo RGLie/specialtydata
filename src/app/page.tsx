@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Search, Coffee, MapPin, Star, ShoppingCart, ChevronDown, ChevronUp, Filter, X } from "lucide-react";
-import { coffeeSearchService, type SearchResult } from "@/data/searchService";
+import { firestoreCoffeeSearchService, type FirestoreSearchResult } from "@/data/firestoreSearchService";
 import { allSuggestions } from "@/data/autoFill";
+import Link from "next/link";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<FirestoreSearchResult[]>([]);
   const [isSearched, setIsSearched] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [onlyUnspecialtyPartners, setOnlyUnspecialtyPartners] = useState(false);
@@ -17,9 +18,28 @@ export default function Home() {
   const [selectedProcessingMethods, setSelectedProcessingMethods] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showDiscontinuedProducts, setShowDiscontinuedProducts] = useState(true);
+  const [availableRoastLevels, setAvailableRoastLevels] = useState<string[]>([]);
+  const [availableProcessingMethods, setAvailableProcessingMethods] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  
+  // 컴포넌트 마운트 시 사용 가능한 필터 옵션 로드
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const [roastLevels, processingMethods] = await Promise.all([
+          firestoreCoffeeSearchService.getAvailableRoastLevels(),
+          firestoreCoffeeSearchService.getAvailableProcessingMethods()
+        ]);
+        setAvailableRoastLevels(roastLevels);
+        setAvailableProcessingMethods(processingMethods);
+      } catch (error) {
+        console.error('필터 옵션 로드 실패:', error);
+      }
+    };
+
+    loadFilterOptions();
+  }, []);
 
   // 검색어 변경 시 자동완성 업데이트
   useEffect(() => {
@@ -54,19 +74,27 @@ export default function Home() {
     }
   }, [onlyUnspecialtyPartners, selectedRoastLevels, selectedProcessingMethods, showDiscontinuedProducts]);
 
-  const handleSearch = (query?: string) => {
+  const handleSearch = async (query?: string) => {
     const searchTerm = query || searchQuery;
     if (searchTerm.trim()) {
-      const results = coffeeSearchService.search(
-        searchTerm, 
-        onlyUnspecialtyPartners, 
-        selectedRoastLevels, 
-        selectedProcessingMethods,
-        showDiscontinuedProducts
-      );
-      setSearchResults(results);
-      setIsSearched(true);
-      setShowSuggestions(false);
+      setIsLoading(true);
+      try {
+        const results = await firestoreCoffeeSearchService.search(
+          searchTerm, 
+          onlyUnspecialtyPartners, 
+          selectedRoastLevels, 
+          selectedProcessingMethods,
+          showDiscontinuedProducts
+        );
+        setSearchResults(results);
+        setIsSearched(true);
+        setShowSuggestions(false);
+      } catch (error) {
+        console.error('검색 중 오류가 발생했습니다:', error);
+        // 사용자에게 오류 메시지 표시할 수 있음
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -117,17 +145,20 @@ export default function Home() {
             <Coffee className="w-5 h-5 coffee-brown" />
             <span className="text-base font-semibold coffee-brown cursor-pointer" onClick={() => setIsSearched(false)}>SpecialtyData</span>
           </div>
-          <nav className="hidden md:flex space-x-4">
-            <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              원두 검색
-            </a>
-            <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              가격 비교
-            </a>
-            <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              로스터리
-            </a>
-          </nav>
+                      <nav className="hidden md:flex space-x-4">
+              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                원두 검색
+              </a>
+              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                가격 비교
+              </a>
+              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                로스터리
+              </a>
+              <Link href="/admin" className="text-sm text-coffee-brown hover:text-coffee-light transition-colors font-medium">
+                관리자
+              </Link>
+            </nav>
         </div>
       </header>
 
@@ -165,16 +196,18 @@ export default function Home() {
                            focus:outline-none focus:border-coffee-brown focus:ring-2 focus:ring-coffee-brown focus:ring-opacity-20
                            hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md
                            placeholder:text-gray-400"
+                  disabled={isLoading}
                 />
               </div>
               <button
                 onClick={() => handleSearch()}
+                disabled={isLoading}
                 className="px-4 py-3 bg-coffee-brown text-white rounded-full text-sm
                          hover:bg-coffee-light transition-all duration-200
                          focus:outline-none focus:ring-2 focus:ring-coffee-brown focus:ring-opacity-20
-                         shadow-sm hover:shadow-md whitespace-nowrap"
+                         shadow-sm hover:shadow-md whitespace-nowrap disabled:opacity-50"
               >
-                검색하기
+                {isLoading ? '검색중...' : '검색하기'}
               </button>
             </div>
 
@@ -272,7 +305,7 @@ export default function Home() {
                     <div>
                       <h4 className="text-xs font-medium text-gray-700 mb-2">로스팅 레벨</h4>
                       <div className="flex flex-wrap gap-2">
-                        {coffeeSearchService.getAvailableRoastLevels().map(level => (
+                        {availableRoastLevels.map((level: string) => (
                           <button
                             key={level}
                             onClick={() => toggleRoastLevel(level)}
@@ -292,7 +325,7 @@ export default function Home() {
                     <div>
                       <h4 className="text-xs font-medium text-gray-700 mb-2">가공 방식</h4>
                       <div className="flex flex-wrap gap-2">
-                        {coffeeSearchService.getAvailableProcessingMethods().map(method => (
+                        {availableProcessingMethods.map((method: string) => (
                           <button
                             key={method}
                             onClick={() => toggleProcessingMethod(method)}
@@ -324,7 +357,7 @@ export default function Home() {
                             </button>
                           </span>
                         )}
-                        {selectedRoastLevels.map(level => (
+                        {selectedRoastLevels.map((level: string) => (
                           <span
                             key={`roast-${level}`}
                             className="inline-flex items-center px-2 py-1 text-xs bg-coffee-brown text-white rounded-full"
@@ -338,7 +371,7 @@ export default function Home() {
                             </button>
                           </span>
                         ))}
-                        {selectedProcessingMethods.map(method => (
+                        {selectedProcessingMethods.map((method: string) => (
                           <span
                             key={`processing-${method}`}
                             className="inline-flex items-center px-2 py-1 text-xs bg-coffee-brown text-white rounded-full"
@@ -435,7 +468,7 @@ export default function Home() {
                       </div>
                     )}
 
-                                        <div className="border-t pt-4">
+                    <div className="border-t pt-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-base font-semibold text-gray-900">가격 비교</h4>
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
@@ -478,7 +511,7 @@ export default function Home() {
                         </div>
                       </div>
 
-                                            {/* 로스터리별 가격 목록 */}
+                      {/* 로스터리별 가격 목록 */}
                       <div className="space-y-2">
                         {result.products.sort((a, b) => a.product.price - b.product.price).map((item, index) => (
                           <div 
@@ -562,7 +595,7 @@ export default function Home() {
                                   }`}>{item.product.name}</div>
                                   {item.product.tastingNotes && item.product.tastingNotes.length > 0 && (
                                     <div className="flex flex-wrap gap-0.5 mt-1">
-                                      {item.product.tastingNotes.slice(0, 2).map((note, noteIndex) => (
+                                      {item.product.tastingNotes.slice(0, 2).map((note: string, noteIndex: number) => (
                                         <span 
                                           key={noteIndex}
                                           className={`text-xs px-1 py-0.5 rounded ${
@@ -612,11 +645,19 @@ export default function Home() {
               ))}
             </div>
 
-            {searchResults.length === 0 && (
+            {searchResults.length === 0 && !isLoading && (
               <div className="text-center py-12">
                 <Coffee className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
                 <p className="text-gray-600">다른 검색어로 시도해보세요.</p>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="text-center py-12">
+                <Coffee className="w-16 h-16 text-gray-300 mx-auto mb-4 animate-pulse" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">검색중...</h3>
+                <p className="text-gray-600">잠시만 기다려주세요.</p>
               </div>
             )}
           </div>

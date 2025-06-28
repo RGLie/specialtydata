@@ -14,9 +14,14 @@ const firebaseConfig = {
 
 // Firebase 앱 초기화
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Analytics는 클라이언트에서만 초기화 (SSR 호환)
+let analytics;
+if (typeof window !== 'undefined') {
+  analytics = getAnalytics(app);
+}
 
 // Firestore 데이터베이스 인스턴스
 export const db = getFirestore(app);
-
+export { analytics };
 export default app;
