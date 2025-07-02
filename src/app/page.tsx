@@ -1,12 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Coffee, MapPin, Star, ShoppingCart, ChevronDown, ChevronUp, Filter, X } from "lucide-react";
+import { Search, Coffee, MapPin, Star, ShoppingCart, ChevronDown, ChevronUp, Filter, X, User, LogOut, MessageCircle, Plus } from "lucide-react";
 import { firestoreCoffeeSearchService, type FirestoreSearchResult } from "@/data/firestoreSearchService";
 import { allSuggestions } from "@/data/autoFill";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { signOut } from "@/lib/auth";
+import LoginModal from "@/components/LoginModal";
+import StarRating from "@/components/StarRating";
+import ReviewModal from "@/components/ReviewModal";
+import ReviewList from "@/components/ReviewList";
+import { Review, ReviewService, ReviewStats } from "@/lib/reviewService";
 
 export default function Home() {
+  const { user, isAdmin, isAuthenticated, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -21,6 +29,13 @@ export default function Home() {
   const [availableRoastLevels, setAvailableRoastLevels] = useState<string[]>([]);
   const [availableProcessingMethods, setAvailableProcessingMethods] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedProductForReview, setSelectedProductForReview] = useState<{ productId: string; standardCoffeeId?: string; productName: string } | null>(null);
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
+  const [reviewStats, setReviewStats] = useState<{ [standardCoffeeId: string]: ReviewStats }>({});
+  const [userReviews, setUserReviews] = useState<{ [productId: string]: Review }>({});
+  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // 컴포넌트 마운트 시 사용 가능한 필터 옵션 로드
@@ -89,6 +104,12 @@ export default function Home() {
         setSearchResults(results);
         setIsSearched(true);
         setShowSuggestions(false);
+        
+        // 검색 결과에 대한 리뷰 데이터 로드
+        await Promise.all([
+          loadReviewStats(results),
+          loadUserReviews(results)
+        ]);
       } catch (error) {
         console.error('검색 중 오류가 발생했습니다:', error);
         // 사용자에게 오류 메시지 표시할 수 있음
@@ -136,8 +157,107 @@ export default function Home() {
     setShowDiscontinuedProducts(true);
   };
 
+  // 리뷰 통계 로드
+  const loadReviewStats = async (results: FirestoreSearchResult[]) => {
+    if (!results.length) return;
+
+    const stats: { [standardCoffeeId: string]: ReviewStats } = {};
+    
+    for (const result of results) {
+      if (result.standardCoffee.id) {
+        try {
+          const reviewStats = await ReviewService.getStandardCoffeeReviewStats(result.standardCoffee.id);
+          stats[result.standardCoffee.id] = reviewStats;
+        } catch (error) {
+          console.error('리뷰 통계 로드 실패:', error);
+        }
+      }
+    }
+    
+    setReviewStats(stats);
+  };
+
+  // 사용자 리뷰 로드
+  const loadUserReviews = async (results: FirestoreSearchResult[]) => {
+    if (!user || !results.length) return;
+
+    const userReviewsData: { [productId: string]: Review } = {};
+    
+    for (const result of results) {
+      for (const product of result.products) {
+        try {
+          const userReview = await ReviewService.getUserProductReview(user.uid, product.product.id);
+          if (userReview) {
+            userReviewsData[product.product.id] = userReview;
+          }
+        } catch (error) {
+          console.error('사용자 리뷰 로드 실패:', error);
+        }
+      }
+    }
+    
+    setUserReviews(userReviewsData);
+  };
+
+  // 리뷰 작성 버튼 클릭
+  const handleWriteReview = (productId: string, standardCoffeeId: string | undefined, productName: string) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    setSelectedProductForReview({ productId, standardCoffeeId, productName });
+    setEditingReview(null);
+    setShowReviewModal(true);
+  };
+
+  // 리뷰 수정 버튼 클릭
+  const handleEditReview = (review: Review) => {
+    if (!user) return;
+
+    setEditingReview(review);
+    setSelectedProductForReview({
+      productId: review.productId,
+      standardCoffeeId: review.standardCoffeeId,
+      productName: `${review.productId} 리뷰` // 제품명을 가져올 수 없어서 임시
+    });
+    setShowReviewModal(true);
+  };
+
+  // 리뷰 모달 성공 후
+  const handleReviewSuccess = () => {
+    setReviewRefreshTrigger(prev => prev + 1);
+    // 리뷰 통계 및 사용자 리뷰 다시 로드
+    if (searchResults.length > 0) {
+      loadReviewStats(searchResults);
+      loadUserReviews(searchResults);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      {/* 임시 디버그 패널 */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-100 border-b border-yellow-200 p-2 text-xs">
+          <div className="max-w-6xl mx-auto">
+            <strong>디버그 정보:</strong> 
+            <span className="ml-2">
+              인증 로딩: {loading ? 'Y' : 'N'} | 
+              인증됨: {isAuthenticated ? 'Y' : 'N'} | 
+              관리자: {isAdmin ? 'Y' : 'N'} | 
+                            사용자: {user ? `${user.email} (${user.role})` : '없음'} |
+               모달 열림: {showLoginModal ? 'Y' : 'N'}
+             </span>
+             <button 
+               onClick={() => console.log('Firebase 상태:', { user, loading, isAuthenticated, isAdmin })}
+               className="ml-4 px-2 py-1 bg-blue-500 text-white text-xs rounded"
+             >
+               콘솔 로그 출력
+             </button>
+           </div>
+         </div>
+       )}
+      
       {/* 헤더 */}
       <header className="w-full p-3">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
@@ -145,19 +265,74 @@ export default function Home() {
             <Coffee className="w-5 h-5 coffee-brown" />
             <span className="text-base font-semibold coffee-brown cursor-pointer" onClick={() => setIsSearched(false)}>SpecialtyData</span>
           </div>
-                      <nav className="hidden md:flex space-x-4">
-              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                원두 검색
-              </a>
-              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                가격 비교
-              </a>
-              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                로스터리
-              </a>
-              <Link href="/admin" className="text-sm text-coffee-brown hover:text-coffee-light transition-colors font-medium">
-                관리자
-              </Link>
+                      <nav className="flex items-center space-x-4">
+              <div className="hidden md:flex space-x-4">
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  원두 검색
+                </a>
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  가격 비교
+                </a>
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  로스터리
+                </a>
+                {isAdmin && (
+                  <Link href="/admin" className="text-sm text-coffee-brown hover:text-coffee-light transition-colors font-medium">
+                    관리자
+                  </Link>
+                )}
+              </div>
+              
+              {/* 사용자 메뉴 */}
+              <div className="flex items-center space-x-2">
+                {loading ? (
+                  <div className="flex items-center space-x-1 text-sm text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-coffee-brown"></div>
+                    <span className="hidden sm:inline">로딩중...</span>
+                  </div>
+                ) : isAuthenticated ? (
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <User className="w-4 h-4 text-green-600" />
+                      <span className="text-sm text-green-700 hidden sm:inline">
+                        {user?.displayName || user?.email?.split('@')[0]}
+                      </span>
+                      {isAdmin && (
+                        <span className="text-xs bg-coffee-brown text-white px-2 py-0.5 rounded-full">
+                          관리자
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await signOut();
+                          console.log('로그아웃 성공');
+                        } catch (error) {
+                          console.error('로그아웃 실패:', error);
+                        }
+                      }}
+                      className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1 px-2 py-1 rounded-lg hover:bg-gray-100"
+                      title="로그아웃"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden sm:inline">로그아웃</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      console.log('로그인 버튼 클릭됨');
+                      setShowLoginModal(true);
+                    }}
+                    className="text-sm text-coffee-brown hover:text-coffee-light transition-colors font-medium flex items-center space-x-1 px-3 py-2 border border-coffee-brown rounded-lg hover:bg-coffee-brown hover:text-white"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>로그인</span>
+                  </button>
+                )}
+              </div>
             </nav>
         </div>
       </header>
@@ -404,8 +579,23 @@ export default function Home() {
                           <span>{result.standardCoffee.origin} · {result.standardCoffee.region}</span>
                         </div>
                         <div className="flex items-center mb-1">
-                          <Star className="w-3 h-3 text-yellow-400 mr-1" />
-                          <span className="text-xs text-gray-600">{result.standardCoffee.avgRating}</span>
+                          {reviewStats[result.standardCoffee.id] ? (
+                            <div className="flex items-center space-x-1">
+                              <StarRating 
+                                rating={reviewStats[result.standardCoffee.id].averageRating} 
+                                readOnly 
+                                size="sm" 
+                              />
+                              <span className="text-xs text-gray-600">
+                                ({reviewStats[result.standardCoffee.id].totalReviews})
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <StarRating rating={0} readOnly size="sm" />
+                              <span className="text-xs text-gray-600 ml-1">리뷰 없음</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -464,6 +654,15 @@ export default function Home() {
                             <span className="text-gray-500">수확 시기:</span>
                             <span className="text-gray-700">{result.standardCoffee.harvestSeason || '정보 없음'}</span>
                           </div>
+                        </div>
+                        
+                        {/* 리뷰 섹션 */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <ReviewList 
+                            standardCoffeeId={result.standardCoffee.id}
+                            onEditReview={handleEditReview}
+                            refreshTrigger={reviewRefreshTrigger}
+                          />
                         </div>
                       </div>
                     )}
@@ -620,6 +819,38 @@ export default function Home() {
                                     {item.product.price.toLocaleString()}원
                                   </div>
                                 </div>
+                                
+                                {/* 리뷰 버튼 */}
+                                {user && (
+                                  <button
+                                    onClick={() => {
+                                      const existingReview = userReviews[item.product.id];
+                                      if (existingReview) {
+                                        handleEditReview(existingReview);
+                                      } else {
+                                        handleWriteReview(
+                                          item.product.id, 
+                                          result.standardCoffee.id, 
+                                          `${item.roastery.name} ${item.product.name}`
+                                        );
+                                      }
+                                    }}
+                                    className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
+                                      userReviews[item.product.id] 
+                                        ? 'bg-coffee-brown text-white hover:bg-coffee-light' 
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                    }`}
+                                    title={userReviews[item.product.id] ? '내 리뷰 수정' : '리뷰 작성'}
+                                  >
+                                    {userReviews[item.product.id] ? (
+                                      <MessageCircle className="w-4 h-4" />
+                                    ) : (
+                                      <Plus className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                )}
+                                
+                                {/* 구매 버튼 */}
                                 <a 
                                   href={item.product.url} 
                                   target="_blank" 
@@ -699,6 +930,40 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* 로그인 모달 */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => {
+          console.log('로그인 모달 닫힘');
+          setShowLoginModal(false);
+        }}
+        onSuccess={() => {
+          console.log('로그인 성공!');
+          setShowLoginModal(false);
+          // 관리자라면 관리자 페이지로 안내할 수도 있음
+          // if (isAdmin) {
+          //   router.push('/admin');
+          // }
+        }}
+      />
+
+      {/* 리뷰 모달 */}
+      {selectedProductForReview && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedProductForReview(null);
+            setEditingReview(null);
+          }}
+          onSuccess={handleReviewSuccess}
+          productId={selectedProductForReview.productId}
+          standardCoffeeId={selectedProductForReview.standardCoffeeId}
+          productName={selectedProductForReview.productName}
+          existingReview={editingReview}
+        />
+      )}
     </div>
   );
 }

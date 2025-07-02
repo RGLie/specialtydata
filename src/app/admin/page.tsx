@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Coffee, Store, Database, BarChart3, Upload, Edit, Trash2 } from "lucide-react";
 import { firestoreService, COLLECTIONS } from "@/lib/firestore";
 import Link from "next/link";
+import AdminGuard from "@/components/AdminGuard";
 
 interface DashboardStats {
   totalRoasteries: number;
@@ -106,7 +107,8 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AdminGuard>
+      <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -274,5 +276,6 @@ export default function AdminDashboard() {
         </div>
       </main>
     </div>
+    </AdminGuard>
   );
 } 

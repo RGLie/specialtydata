@@ -18,8 +18,9 @@ import { db } from './firebase';
 // 컬렉션 이름 상수
 export const COLLECTIONS = {
   ROASTERIES: 'roasteries',
-  COFFEE_PRODUCTS: 'coffeeProducts',
-  STANDARD_COFFEES: 'standardCoffees'
+  COFFEE_PRODUCTS: 'coffeeProducts', 
+  STANDARD_COFFEES: 'standardCoffees',
+  REVIEWS: 'reviews'
 } as const;
 
 // Firestore 데이터베이스 서비스 클래스
